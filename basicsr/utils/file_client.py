@@ -1,6 +1,7 @@
 from mmcv.fileio.file_client import (BaseStorageBackend, CephBackend,
                                      HardDiskBackend, MemcachedBackend)
 
+import numpy as np
 
 class LmdbBackend(BaseStorageBackend):
     """Lmdb storage backend.
@@ -73,6 +74,23 @@ class LmdbBackend(BaseStorageBackend):
         raise NotImplementedError
 
 
+class NpyBackend(BaseStorageBackend):
+    """Npy storage backend."""
+
+    def get(self, filepath):
+        """Get values according to the filepath.
+
+        Args:
+            filepath (str | obj:`Path`): Here, filepath is the lmdb key.
+        """
+        filepath = str(filepath)
+        value_buf = np.load(filepath)
+        return value_buf
+
+    def get_text(self, filepath):
+        raise NotImplementedError
+
+
 class FileClient(object):
     """A general file client to access files in different backend.
 
@@ -91,6 +109,7 @@ class FileClient(object):
         'ceph': CephBackend,
         'memcached': MemcachedBackend,
         'lmdb': LmdbBackend,
+        'npy': NpyBackend,
     }
 
     def __init__(self, backend='disk', **kwargs):

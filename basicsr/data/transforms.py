@@ -85,6 +85,46 @@ def paired_random_crop(img_gts, img_lqs, gt_patch_size, scale, gt_path):
     return img_gts, img_lqs
 
 
+def random_crop(img, patch_size):
+    """random crop.
+
+    It crops lists of images with corresponding locations.
+
+    Args:
+        img (list[ndarray] | ndarray): LQ images. Note that all images
+            should have the same shape. If the input is an ndarray, it will
+            be transformed to a list containing itself.
+        patch_size (int): GT patch size.
+
+    Returns:
+        list[ndarray] | ndarray: GT images and LQ images. If returned results
+            only have one element, just return ndarray.
+    """
+
+    if not isinstance(img, list):
+        img = [img]
+
+    h, w, _ = img[0].shape
+
+    if h < patch_size or w < patch_size:
+        raise ValueError(f'LQ ({h}, {w}) is smaller than patch size '
+                         f'({patch_size}, {patch_size}). ')
+
+    # randomly choose top and left coordinates for lq patch
+    top = random.randint(0, h - patch_size)
+    left = random.randint(0, w - patch_size)
+
+    # crop lq patch
+    img = [
+        v[top:top + patch_size, left:left + patch_size, :]
+        for v in img
+    ]
+
+    if len(img) == 1:
+        img = img[0]
+    return img
+
+
 def augment(img_list, hflip=True, rotation=True, flow_list=None):
     """Augment: horizontal flips or rotate (0, 90, 180, 270 degrees).
 

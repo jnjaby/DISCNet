@@ -41,6 +41,10 @@ def check_resume(opt, resume_iter):
         logger.info(
             f"Set pretrain_model_d to {opt['path']['pretrain_model_d']}")
 
+        opt['path']['pretrain_model_r'] = osp.join(opt['path']['models'],
+                                                   f'net_r_{resume_iter}.pth')
+        logger.info(
+            f"Set pretrain_model_r to {opt['path']['pretrain_model_r']}")
 
 def mkdir_and_rename(path):
     """mkdirs. If path exists, rename it with timestamp and create a new one.
@@ -153,6 +157,107 @@ def tensor2img(tensor, out_type=np.uint8, min_max=(0, 1)):
             # Unlike MATLAB, numpy.unit8() WILL NOT round by default.
             img_np = (img_np * 255.0).round()
         img_np.astype(out_type)
+        rlt.append(img_np)
+    if len(rlt) == 1:
+        rlt = rlt[0]
+    return rlt
+
+def tensor2npy(tensor, out_type=np.float):
+    """ Convert torch Tensors into image numpy arrays.
+    After clamping to [min, max], values will be normalized to [0, 1].
+
+    Args:
+        tensor (Tensor or list[Tensor]): Accept shapes:
+            1) 4D mini-batch Tensor of shape (B x 3/1 x H x W);
+            2) 3D Tensor of shape (3/1 x H x W);
+            3) 2D Tensor of shape (H x W).
+            Tensor channel should be in RGB order.
+        out_type (numpy type): output types. If ``np.uint8``, transform outputs
+            to uint8 type with range [0, 255]; otherwise, float type with
+            range [0, 1]. Default: ``np.uint8``.
+        min_max (tuple[int]): min and max values for clamp.
+
+    Returns:
+        (Tensor or list): 3D ndarray of shape (H x W x C) OR 2D ndarray of
+        shape (H x W). The channel order is BGR.
+    """
+    if not (torch.is_tensor(tensor) or
+            (isinstance(tensor, list)
+             and all(torch.is_tensor(t) for t in tensor))):
+        raise TypeError(
+            f'tensor or list of tensors expected, got {type(tensor)}')
+
+    if torch.is_tensor(tensor):
+        tensor = [tensor]
+    rlt = []
+    for _tensor in tensor:
+        _tensor = _tensor.squeeze(0).float().detach().cpu().clamp_(min=0)
+
+        n_dim = _tensor.dim()
+        if n_dim == 4:
+            img_np = make_grid(
+                _tensor, nrow=int(math.sqrt(_tensor.size(0))),
+                normalize=False).numpy()
+            img_np = np.transpose(img_np, (1, 2, 0))  # HWC, BGR
+        elif n_dim == 3:
+            img_np = _tensor.numpy()
+            img_np = np.transpose(img_np, (1, 2, 0))  # HWC, BGR
+        elif n_dim == 2:
+            img_np = _tensor.numpy()
+        else:
+            raise TypeError('Only support 4D, 3D or 2D tensor. '
+                            f'But received with dimension: {n_dim}')
+        if out_type == np.uint8:
+            # Unlike MATLAB, numpy.unit8() WILL NOT round by default.
+            img_np = (img_np * 255.0).round()
+        img_np.astype(out_type)
+        rlt.append(img_np)
+    if len(rlt) == 1:
+        rlt = rlt[0]
+    return rlt
+
+def tensor2raw(tensor, min_max=(0, 1)):
+    """ Convert torch Tensors into numpy arrays.
+    After clamping to [min, max], values will be normalized to [0, 1].
+
+    Args:
+        tensor (Tensor or list[Tensor]): Accept shapes:
+            1) 4D mini-batch Tensor of shape (B x 4 x H x W);
+            2) 3D Tensor of shape (4 x H x W);
+            3) 2D Tensor of shape (H x W).
+        min_max (tuple[int]): min and max values for clamp.
+
+    Returns:
+        (Tensor or list): 3D ndarray of shape (H x W x C) OR 2D ndarray of
+        shape (H x W). The channel order is BGR.
+    """
+    if not (torch.is_tensor(tensor) or
+            (isinstance(tensor, list)
+             and all(torch.is_tensor(t) for t in tensor))):
+        raise TypeError(
+            f'tensor or list of tensors expected, got {type(tensor)}')
+
+    if torch.is_tensor(tensor):
+        tensor = [tensor]
+    rlt = []
+    for _tensor in tensor:
+        _tensor = _tensor.squeeze(0).float().detach().cpu().clamp_(*min_max)
+        _tensor = (_tensor - min_max[0]) / (min_max[1] - min_max[0])
+
+        n_dim = _tensor.dim()
+        if n_dim == 4:
+            img_np = make_grid(
+                _tensor, nrow=int(math.sqrt(_tensor.size(0))),
+                normalize=False).numpy()
+            img_np = np.transpose(img_np, (1, 2, 0))  # HWC
+        elif n_dim == 3:
+            img_np = _tensor.numpy()
+            img_np = np.transpose(img_np, (1, 2, 0))  # HWC
+        elif n_dim == 2:
+            img_np = _tensor.numpy()
+        else:
+            raise TypeError('Only support 4D, 3D or 2D tensor. '
+                            f'But received with dimension: {n_dim}')
         rlt.append(img_np)
     if len(rlt) == 1:
         rlt = rlt[0]

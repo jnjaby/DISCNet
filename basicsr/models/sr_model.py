@@ -4,10 +4,11 @@ import torch
 from collections import OrderedDict
 from copy import deepcopy
 from os import path as osp
+import numpy as np
 
 from basicsr.models import networks as networks
 from basicsr.models.base_model import BaseModel
-from basicsr.utils import ProgressBar, get_root_logger, tensor2img
+from basicsr.utils import ProgressBar, get_root_logger, tensor2img, tensor2raw
 
 loss_module = importlib.import_module('basicsr.models.losses')
 metric_module = importlib.import_module('basicsr.metrics')
@@ -121,7 +122,7 @@ class SRModel(BaseModel):
     def dist_validation(self, dataloader, current_iter, tb_logger, save_img):
         logger = get_root_logger()
         logger.info('Only support single GPU validation.')
-        self.nondist_val(dataloader, current_iter, tb_logger, save_img)
+        self.nondist_validation(dataloader, current_iter, tb_logger, save_img)
 
     def nondist_validation(self, dataloader, current_iter, tb_logger,
                            save_img):
@@ -140,8 +141,10 @@ class SRModel(BaseModel):
             self.test()
 
             visuals = self.get_current_visuals()
+            # sr_img = tensor2raw([visuals['rlt']]) # replace for raw data.
             sr_img = tensor2img([visuals['rlt']])
             if 'gt' in visuals:
+                # gt_img = tensor2raw([visuals['gt']]) # replace for raw data.
                 gt_img = tensor2img([visuals['gt']])
                 del self.gt
 
@@ -163,7 +166,8 @@ class SRModel(BaseModel):
                     else:
                         save_img_path = osp.join(
                             self.opt['path']['visualization'], dataset_name,
-                            f'{img_name}_{self.opt["name"]}.png')
+                            f'{img_name}.png')
+                # np.save(save_img_path.replace('.png', '.npy'), sr_img) # replace for raw data.
                 mmcv.imwrite(sr_img, save_img_path)
 
             if with_metrics:
@@ -171,6 +175,10 @@ class SRModel(BaseModel):
                 opt_metric = deepcopy(self.opt['val']['metrics'])
                 for name, opt_ in opt_metric.items():
                     metric_type = opt_.pop('type')
+                    # replace for raw data.
+                    # self.metric_results[name] += getattr(
+                    #     metric_module, metric_type)(sr_img*255, gt_img*255, **opt_)
+
                     self.metric_results[name] += getattr(
                         metric_module, metric_type)(sr_img, gt_img, **opt_)
             pbar.update(f'Test {img_name}')

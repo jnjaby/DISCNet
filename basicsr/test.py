@@ -5,7 +5,7 @@ from os import path as osp
 
 from basicsr.data import create_dataloader, create_dataset
 from basicsr.models import create_model
-from basicsr.utils import get_env_info, get_root_logger, make_exp_dirs
+from basicsr.utils import get_env_info, get_root_logger, make_exp_dirs, mkdir_and_rename
 from basicsr.utils.options import dict2str, parse
 
 
@@ -56,6 +56,8 @@ def main():
 
     for test_loader in test_loaders:
         test_set_name = test_loader.dataset.opt['name']
+        mkdir_and_rename(osp.join(opt['path']['visualization'], test_set_name))
+
         logger.info(f'Testing {test_set_name}...')
         model.validation(
             test_loader,
