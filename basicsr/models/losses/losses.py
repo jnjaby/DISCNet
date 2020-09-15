@@ -1,26 +1,27 @@
+import math
 import torch
 from torch import autograd as autograd
 from torch import nn as nn
 from torch.nn import functional as F
 
 from basicsr.models.archs.vgg_arch import VGGFeatureExtractor
-from basicsr.models.losses.loss_utils import masked_loss
+from basicsr.models.losses.loss_utils import weighted_loss
 
 _reduction_modes = ['none', 'mean', 'sum']
 
 
-@masked_loss
+@weighted_loss
 def l1_loss(pred, target):
     return F.l1_loss(pred, target, reduction='none')
 
 
-@masked_loss
+@weighted_loss
 def mse_loss(pred, target):
     return F.mse_loss(pred, target, reduction='none')
 
 
-@masked_loss
-def charbonnier_loss(pred, target, eps=1e-6):
+@weighted_loss
+def charbonnier_loss(pred, target, eps=1e-12):
     return torch.sqrt((pred - target)**2 + eps)
 
 
@@ -35,11 +36,12 @@ class L1Loss(nn.Module):
 
     def __init__(self, loss_weight=1.0, reduction='mean'):
         super(L1Loss, self).__init__()
+        if reduction not in ['none', 'mean', 'sum']:
+            raise ValueError(f'Unsupported reduction mode: {reduction}. '
+                             f'Supported ones are: {_reduction_modes}')
+
         self.loss_weight = loss_weight
         self.reduction = reduction
-        if self.reduction not in ['none', 'mean', 'sum']:
-            raise ValueError(f'Unsupported reduction mode: {self.reduction}. '
-                             f'Supported ones are: {_reduction_modes}')
 
     def forward(self, pred, target, weight=None, **kwargs):
         """
@@ -64,11 +66,12 @@ class MSELoss(nn.Module):
 
     def __init__(self, loss_weight=1.0, reduction='mean'):
         super(MSELoss, self).__init__()
+        if reduction not in ['none', 'mean', 'sum']:
+            raise ValueError(f'Unsupported reduction mode: {reduction}. '
+                             f'Supported ones are: {_reduction_modes}')
+
         self.loss_weight = loss_weight
         self.reduction = reduction
-        if self.reduction not in ['none', 'mean', 'sum']:
-            raise ValueError(f'Unsupported reduction mode: {self.reduction}. '
-                             f'Supported ones are: {_reduction_modes}')
 
     def forward(self, pred, target, weight=None, **kwargs):
         """
@@ -99,12 +102,13 @@ class CharbonnierLoss(nn.Module):
 
     def __init__(self, loss_weight=1.0, reduction='mean', eps=1e-12):
         super(CharbonnierLoss, self).__init__()
+        if reduction not in ['none', 'mean', 'sum']:
+            raise ValueError(f'Unsupported reduction mode: {reduction}. '
+                             f'Supported ones are: {_reduction_modes}')
+
         self.loss_weight = loss_weight
         self.reduction = reduction
         self.eps = eps
-        if self.reduction not in ['none', 'mean', 'sum']:
-            raise ValueError(f'Unsupported reduction mode: {self.reduction}. '
-                             f'Supported ones are: {_reduction_modes}')
 
     def forward(self, pred, target, weight=None, **kwargs):
         """
@@ -118,16 +122,21 @@ class CharbonnierLoss(nn.Module):
             pred, target, weight, eps=self.eps, reduction=self.reduction)
 
 
-class MaskedTVLoss(L1Loss):
+class WeightedTVLoss(L1Loss):
+    """Weighted TV loss.
+
+        Args:
+            loss_weight (float): Loss weight. Default: 1.0.
+    """
 
     def __init__(self, loss_weight=1.0):
-        super(MaskedTVLoss, self).__init__(loss_weight=loss_weight)
+        super(WeightedTVLoss, self).__init__(loss_weight=loss_weight)
 
-    def forward(self, pred, mask=None):
-        y_diff = super(MaskedTVLoss, self).forward(
-            pred[:, :, :-1, :], pred[:, :, 1:, :], weight=mask[:, :, :-1, :])
-        x_diff = super(MaskedTVLoss, self).forward(
-            pred[:, :, :, :-1], pred[:, :, :, 1:], weight=mask[:, :, :, :-1])
+    def forward(self, pred, weight=None):
+        y_diff = super(WeightedTVLoss, self).forward(
+            pred[:, :, :-1, :], pred[:, :, 1:, :], weight=weight[:, :, :-1, :])
+        x_diff = super(WeightedTVLoss, self).forward(
+            pred[:, :, :, :-1], pred[:, :, :, 1:], weight=weight[:, :, :, :-1])
 
         loss = x_diff + y_diff
 
@@ -138,7 +147,7 @@ class PerceptualLoss(nn.Module):
     """Perceptual loss with commonly used style loss.
 
     Args:
-        layers_weights (dict): The weight for each layer of vgg feature.
+        layer_weights (dict): The weight for each layer of vgg feature.
             Here is an example: {'conv5_4': 1.}, which means the conv5_4
             feature layer (before relu5_4) will be extracted with weight
             1.0 in calculting losses.
@@ -156,8 +165,8 @@ class PerceptualLoss(nn.Module):
             this is different from the `use_input_norm` which norm the input in
             in forward function of vgg according to the statistics of dataset.
             Importantly, the input image must be in range [-1, 1].
-        pretrained (str): Path for pretrained weights. Default:
-            'torchvision://vgg19'
+            Default: False.
+        criterion (str): Criterion used for perceptual loss. Default: 'l1'.
     """
 
     def __init__(self,
@@ -165,8 +174,8 @@ class PerceptualLoss(nn.Module):
                  vgg_type='vgg19',
                  use_input_norm=True,
                  perceptual_weight=1.0,
-                 style_weight=0,
-                 norm_img=True,
+                 style_weight=0.,
+                 norm_img=False,
                  criterion='l1'):
         super(PerceptualLoss, self).__init__()
         self.norm_img = norm_img
@@ -187,13 +196,23 @@ class PerceptualLoss(nn.Module):
             self.criterion = None
         else:
             raise NotImplementedError(
-                f'{criterion} criterion has not been supported in'
-                ' this version.')
+                f'{criterion} criterion has not been supported.')
 
     def forward(self, x, gt):
+        """Forward function.
+
+        Args:
+            x (Tensor): Input tensor with shape (n, c, h, w).
+            gt (Tensor): Ground-truth tensor with shape (n, c, h, w).
+
+        Returns:
+            Tensor: Forward results.
+        """
+
         if self.norm_img:
             x = (x + 1.) * 0.5
             gt = (gt + 1.) * 0.5
+
         # extract vgg features
         x_features = self.vgg(x)
         gt_features = self.vgg(gt.detach())
@@ -217,9 +236,15 @@ class PerceptualLoss(nn.Module):
         if self.style_weight > 0:
             style_loss = 0
             for k in x_features.keys():
-                style_loss += self.criterion(
-                    self._gram_mat(x_features[k]),
-                    self._gram_mat(gt_features[k])) * self.layer_weights[k]
+                if self.criterion_type == 'fro':
+                    style_loss += torch.norm(
+                        self._gram_mat(x_features[k]) -
+                        self._gram_mat(gt_features[k]),
+                        p='fro') * self.layer_weights[k]
+                else:
+                    style_loss += self.criterion(
+                        self._gram_mat(x_features[k]),
+                        self._gram_mat(gt_features[k])) * self.layer_weights[k]
             style_loss *= self.style_weight
         else:
             style_loss = None
@@ -227,7 +252,15 @@ class PerceptualLoss(nn.Module):
         return percep_loss, style_loss
 
     def _gram_mat(self, x):
-        (n, c, h, w) = x.size()
+        """Calculate Gram matrix.
+
+        Args:
+            x (torch.Tensor): Tensor with shape of (n, c, h, w).
+
+        Returns:
+            torch.Tensor: Gram matrix.
+        """
+        n, c, h, w = x.size()
         features = x.view(n, c, w * h)
         features_t = features.transpose(1, 2)
         gram = features.bmm(features_t) / (c * h * w)
@@ -263,6 +296,8 @@ class GANLoss(nn.Module):
             self.loss = nn.MSELoss()
         elif self.gan_type == 'wgan':
             self.loss = self._wgan_loss
+        elif self.gan_type == 'wgan_softplus':
+            self.loss = self._wgan_softplus_loss
         elif self.gan_type == 'hinge':
             self.loss = nn.ReLU()
         else:
@@ -281,6 +316,24 @@ class GANLoss(nn.Module):
         """
         return -input.mean() if target else input.mean()
 
+    def _wgan_softplus_loss(self, input, target):
+        """wgan loss with soft plus. softplus is a smooth approximation to the
+        ReLU function.
+
+        In StyleGAN2, it is called:
+            Logistic loss for discriminator;
+            Non-saturating loss for generator.
+
+        Args:
+            input (Tensor): Input tensor.
+            target (bool): Target label.
+
+        Returns:
+            Tensor: wgan loss.
+        """
+        return F.softplus(-input).mean() if target else F.softplus(
+            input).mean()
+
     def get_target_label(self, input, target_is_real):
         """Get target label.
 
@@ -293,7 +346,7 @@ class GANLoss(nn.Module):
                 return Tensor.
         """
 
-        if self.gan_type == 'wgan':
+        if self.gan_type in ['wgan', 'wgan_softplus']:
             return target_is_real
         target_val = (
             self.real_label_val if target_is_real else self.fake_label_val)
@@ -325,14 +378,47 @@ class GANLoss(nn.Module):
         return loss if is_disc else loss * self.loss_weight
 
 
-def gradient_penalty_loss(discriminator, real_data, fake_data, mask=None):
+def r1_penalty(real_pred, real_img):
+    """R1 regularization for discriminator. The core idea is to
+        penalize the gradient on real data alone: when the
+        generator distribution produces the true data distribution
+        and the discriminator is equal to 0 on the data manifold, the
+        gradient penalty ensures that the discriminator cannot create
+        a non-zero gradient orthogonal to the data manifold without
+        suffering a loss in the GAN game.
+
+        Ref:
+        Eq. 9 in Which training methods for GANs do actually converge.
+        """
+    grad_real = autograd.grad(
+        outputs=real_pred.sum(), inputs=real_img, create_graph=True)[0]
+    grad_penalty = grad_real.pow(2).view(grad_real.shape[0], -1).sum(1).mean()
+    return grad_penalty
+
+
+def g_path_regularize(fake_img, latents, mean_path_length, decay=0.01):
+    noise = torch.randn_like(fake_img) / math.sqrt(
+        fake_img.shape[2] * fake_img.shape[3])
+    grad = autograd.grad(
+        outputs=(fake_img * noise).sum(), inputs=latents, create_graph=True)[0]
+    path_lengths = torch.sqrt(grad.pow(2).sum(2).mean(1))
+
+    path_mean = mean_path_length + decay * (
+        path_lengths.mean() - mean_path_length)
+
+    path_penalty = (path_lengths - path_mean).pow(2).mean()
+
+    return path_penalty, path_lengths.detach().mean(), path_mean.detach()
+
+
+def gradient_penalty_loss(discriminator, real_data, fake_data, weight=None):
     """Calculate gradient penalty for wgan-gp.
 
     Args:
         discriminator (nn.Module): Network for the discriminator.
         real_data (Tensor): Real input data.
         fake_data (Tensor): Fake input data.
-        mask (Tensor): Masks for inpaitting. Default: None.
+        weight (Tensor): Weight tensor. Default: None.
 
     Returns:
         Tensor: A tensor for gradient penalty.
@@ -354,39 +440,11 @@ def gradient_penalty_loss(discriminator, real_data, fake_data, mask=None):
         retain_graph=True,
         only_inputs=True)[0]
 
-    if mask is not None:
-        gradients = gradients * mask
+    if weight is not None:
+        gradients = gradients * weight
 
     gradients_penalty = ((gradients.norm(2, dim=1) - 1)**2).mean()
-    if mask is not None:
-        gradients_penalty /= torch.mean(mask)
+    if weight is not None:
+        gradients_penalty /= torch.mean(weight)
 
     return gradients_penalty
-
-
-class GradientPenaltyLoss(nn.Module):
-    """Gradient penalty loss for wgan-gp.
-
-    Args:
-        loss_weight (float): Loss weight. Default: 1.0.
-    """
-
-    def __init__(self, loss_weight=1.):
-        super(GradientPenaltyLoss, self).__init__()
-        self.loss_weight = loss_weight
-
-    def forward(self, discriminator, real_data, fake_data, mask=None):
-        """
-        Args:
-            discriminator (nn.Module): Network for the discriminator.
-            real_data (Tensor): Real input data.
-            fake_data (Tensor): Fake input data.
-            mask (Tensor): Masks for inpaitting. Default: None.
-
-        Returns:
-            Tensor: Loss.
-        """
-        loss = gradient_penalty_loss(
-            discriminator, real_data, fake_data, mask=mask)
-
-        return loss * self.loss_weight

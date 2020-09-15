@@ -60,7 +60,10 @@ class SpyNet(nn.Module):
         super(SpyNet, self).__init__()
         self.basic_module = nn.ModuleList([BasicModule() for _ in range(6)])
         if load_path:
-            self.load_state_dict(torch.load(load_path)['params'])
+            self.load_state_dict(
+                torch.load(
+                    load_path,
+                    map_location=lambda storage, loc: storage)['params'])
 
         self.register_buffer(
             'mean',
@@ -130,8 +133,8 @@ class SpyNet(nn.Module):
         assert ref.size() == supp.size()
 
         h, w = ref.size(2), ref.size(3)
-        w_floor = int(math.floor(math.ceil(w / 32.0) * 32.0))
-        h_floor = int(math.floor(math.ceil(h / 32.0) * 32.0))
+        w_floor = math.floor(math.ceil(w / 32.0) * 32.0)
+        h_floor = math.floor(math.ceil(h / 32.0) * 32.0)
 
         ref = F.interpolate(
             input=ref,

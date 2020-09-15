@@ -1,7 +1,8 @@
 name: EDVR_L_x4_REDS_SR_official
 model_type: EDVRModel
 scale: 4
-num_gpu: 4
+num_gpu: 4  # set num_gpu: 0 for cpu mode
+manual_seed: 0
 
 datasets:
   test:
@@ -34,7 +35,7 @@ network_g:
 
 # path
 path:
-  pretrain_model_g: experiments/pretrained_models/EDVR_L_x4_SR_REDS_official-ae9c8dde.pth
+  pretrain_model_g: experiments/pretrained_models/EDVR_L_x4_SR_REDS_official-9f5f5039.pth
   strict_load: true
 
 # validation settings

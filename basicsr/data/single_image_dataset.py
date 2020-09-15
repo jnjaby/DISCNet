@@ -2,6 +2,7 @@ import mmcv
 import numpy as np
 from os import path as osp
 from torch.utils import data as data
+from torchvision.transforms.functional import normalize
 
 from basicsr.data.transforms import totensor
 from basicsr.utils import FileClient
@@ -13,13 +14,13 @@ class SingleImageDataset(data.Dataset):
     Read LQ (Low Quality, e.g. LR (Low Resolution), blurry, noisy, etc).
 
     There are two modes:
-    1. 'ann_file': Use annotation file to generate paths.
+    1. 'meta_info_file': Use meta information file to generate paths.
     2. 'folder': Scan folders to generate paths.
 
     Args:
         opt (dict): Config for train datasets. It contains the following keys:
             dataroot_lq (str): Data root path for lq.
-            ann_file (str): Path for annotation file.
+            meta_info_file (str): Path for meta information file.
             io_backend (dict): IO backend type and other kwarg.
     """
 
@@ -29,10 +30,11 @@ class SingleImageDataset(data.Dataset):
         # file client (io backend)
         self.file_client = None
         self.io_backend_opt = opt['io_backend']
-
+        self.mean = opt['mean'] if 'mean' in opt else None
+        self.std = opt['std'] if 'std' in opt else None
         self.lq_folder = opt['dataroot_lq']
-        if 'ann_file' in self.opt:
-            with open(self.opt['ann_file'], 'r') as fin:
+        if 'meta_info_file' in self.opt:
+            with open(self.opt['meta_info_file'], 'r') as fin:
                 self.paths = [
                     osp.join(self.lq_folder,
                              line.split(' ')[0]) for line in fin
@@ -56,7 +58,9 @@ class SingleImageDataset(data.Dataset):
         # TODO: color space transform
         # BGR to RGB, HWC to CHW, numpy to tensor
         img_lq = totensor(img_lq, bgr2rgb=True, float32=True)
-
+        # normalize
+        if self.mean is not None or self.std is not None:
+            normalize(img_lq, self.mean, self.std, inplace=True)
         return {'lq': img_lq, 'lq_path': lq_path}
 
     def __len__(self):

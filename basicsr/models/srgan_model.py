@@ -1,6 +1,7 @@
 import importlib
 import torch
 from collections import OrderedDict
+from copy import deepcopy
 
 from basicsr.models import networks as networks
 from basicsr.models.sr_model import SRModel
@@ -15,7 +16,7 @@ class SRGANModel(SRModel):
         train_opt = self.opt['train']
 
         # define network net_d
-        self.net_d = networks.define_net_d(self.opt['network_d'])
+        self.net_d = networks.define_net_d(deepcopy(self.opt['network_d']))
         self.net_d = self.model_to_device(self.net_d)
         self.print_network(self.net_d)
 
@@ -29,7 +30,7 @@ class SRGANModel(SRModel):
         self.net_d.train()
 
         # define losses
-        if train_opt.get('pixel_opt', None):
+        if train_opt.get('pixel_opt'):
             pixel_type = train_opt['pixel_opt'].pop('type')
             cri_pix_cls = getattr(loss_module, pixel_type)
             self.cri_pix = cri_pix_cls(**train_opt['pixel_opt']).to(
@@ -37,7 +38,7 @@ class SRGANModel(SRModel):
         else:
             self.cri_pix = None
 
-        if train_opt.get('perceptual_opt', None):
+        if train_opt.get('perceptual_opt'):
             percep_type = train_opt['perceptual_opt'].pop('type')
             cri_perceptual_cls = getattr(loss_module, percep_type)
             self.cri_perceptual = cri_perceptual_cls(
@@ -45,15 +46,13 @@ class SRGANModel(SRModel):
         else:
             self.cri_perceptual = None
 
-        if train_opt.get('gan_opt', None):
+        if train_opt.get('gan_opt'):
             gan_type = train_opt['gan_opt'].pop('type')
             cri_gan_cls = getattr(loss_module, gan_type)
             self.cri_gan = cri_gan_cls(**train_opt['gan_opt']).to(self.device)
 
-        self.net_d_iters = train_opt['net_d_iters'] if train_opt[
-            'net_d_iters'] else 1
-        self.net_d_init_iters = train_opt['net_d_init_iters'] if train_opt[
-            'net_d_init_iters'] else 0
+        self.net_d_iters = train_opt.get('net_d_iters', 1)
+        self.net_d_init_iters = train_opt.get('net_d_init_iters', 0)
 
         # set up optimizers and schedulers
         self.setup_optimizers()
