@@ -3,7 +3,9 @@ import logging
 import random
 import torch
 from mmcv.runner import get_dist_info, get_time_str, init_dist
+from mmcv import mkdir_or_exist
 from os import path as osp
+from torchsummaryX import summary
 
 from basicsr.data import create_dataloader, create_dataset
 from basicsr.models import create_model
@@ -78,9 +80,12 @@ def main():
     # create model
     model = create_model(opt)
 
+    dummy_input = torch.zeros((1, 3, 800, 800)).to(model.device)
+    summary(model.net_g, dummy_input)
+
     for test_loader in test_loaders:
         test_set_name = test_loader.dataset.opt['name']
-        mkdir_and_rename(osp.join(opt['path']['visualization'], test_set_name))
+        mkdir_or_exist(osp.join(opt['path']['visualization'], test_set_name))
 
         logger.info(f'Testing {test_set_name}...')
         model.validation(

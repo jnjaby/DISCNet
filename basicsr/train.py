@@ -2,6 +2,7 @@ import argparse
 import datetime
 import logging
 import math
+import os, pdb
 import random
 import time
 import torch
@@ -20,6 +21,9 @@ from basicsr.utils.options import dict2str, parse
 
 def main():
     # options
+    os.environ["WANDB_MODE"] = "dryrun"
+
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-opt', type=str, required=True, help='Path to option YAML file.')
@@ -106,6 +110,7 @@ def main():
                 sampler=train_sampler,
                 seed=seed)
 
+            # pdb.set_trace()
             num_iter_per_epoch = math.ceil(
                 len(train_set) * dataset_enlarge_ratio /
                 (dataset_opt['batch_size_per_gpu'] * opt['world_size']))

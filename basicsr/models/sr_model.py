@@ -85,6 +85,8 @@ class SRModel(BaseModel):
         self.lq = data['lq'].to(self.device)
         if 'gt' in data:
             self.gt = data['gt'].to(self.device)
+        if 'atn' in data:
+            self.atn = data['atn'].to(self.device)
 
     def optimize_parameters(self, current_iter):
         self.optimizer_g.zero_grad()
@@ -167,6 +169,7 @@ class SRModel(BaseModel):
                             f'{img_name}.png')
                 # np.save(save_img_path.replace('.png', '.npy'), sr_img) # replace for raw data.
                 mmcv.imwrite(sr_img, save_img_path)
+                # mmcv.imwrite(gt_img, save_img_path.replace('syn_val', 'gt'))
 
             if with_metrics:
                 # calculate metrics

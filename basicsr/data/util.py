@@ -203,6 +203,49 @@ def paired_paths_from_meta_info_file(folders, keys, meta_info_file,
     return paths
 
 
+def multiple_paths_from_meta_info_file(folders, keys, meta_info_file,
+                                     filename_tmpl):
+    """Generate paired paths from an meta information file.
+
+    Each line in the meta information file contains the image names and
+    image shape (usually for gt), separated by a white space.
+
+    Example of an meta information file:
+    ```
+    0001_s001.png (480,480,3)
+    0001_s002.png (480,480,3)
+    ```
+
+    Args:
+        folders (list[str]): A list of folder path. The order of list should
+            be [input_folder, gt_folder].
+        keys (list[str]): A list of keys identifying folders. The order should
+            be in consistent with folders, e.g., ['lq', 'gt'].
+        meta_info_file (str): Path to the meta information file.
+        filename_tmpl (str): Template for each filename. Note that the
+            template excludes the file extension. Usually the filename_tmpl is
+            for files in the input folder.
+
+    Returns:
+        list[str]: Returned path list.
+    """
+    assert len(folders) == len(keys), (
+        'The len of folders and keys should match. '
+        f'But got {len(folders)} and {len(keys)}')
+
+    with open(meta_info_file, 'r') as fin:
+        gt_names = [line.split(' ')[0] for line in fin]
+
+    paths = []
+    for gt_name in gt_names:
+        d = {}
+        for folder, key in zip(folders, keys):
+            d[f'{key}_path'] = osp.join(folder, gt_name)
+        paths.append(d)
+    # import pdb; pdb.set_trace()
+    return paths
+
+
 def paired_paths_from_folder(folders, keys, filename_tmpl):
     """Generate paired paths from folders.
 

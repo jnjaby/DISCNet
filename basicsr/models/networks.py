@@ -31,6 +31,13 @@ def define_net_g(opt):
     return net_g
 
 
+def define_net_r(opt):
+    network_type = opt.pop('type')
+    net_r = dynamic_instantiation(_arch_modules, network_type, opt)
+
+    return net_r
+
+
 # Discriminator
 def define_net_d(opt):
     network_type = opt.pop('type')

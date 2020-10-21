@@ -74,3 +74,46 @@ class MSRResNet(nn.Module):
             x, scale_factor=self.upscale, mode='bilinear', align_corners=False)
         out += base
         return out
+
+
+class ResNet(nn.Module):
+    """ResNet w/o BN.
+
+    It uses residual blocks without BN, similar to EDSR.
+    Currently, it supports image-to-image translation.
+
+    Args:
+        num_in_ch (int): Channel number of inputs. Default: 3.
+        num_out_ch (int): Channel number of outputs. Default: 3.
+        num_feat (int): Channel number of intermediate features.
+            Default: 64.
+        num_block (int): Block number in the body network. Default: 16.
+    """
+
+    def __init__(self,
+                 num_in_ch=3,
+                 num_out_ch=3,
+                 num_feat=64,
+                 num_block=16,):
+        super().__init__()
+
+        self.conv_first = nn.Conv2d(num_in_ch, num_feat, 3, 1, 1)
+        self.body = arch_util.make_layer(
+            arch_util.ResidualBlockNoBN, num_block, num_feat=num_feat)
+
+        self.conv_last = nn.Conv2d(num_feat, num_out_ch, 3, 1, 1)
+
+        # activation function
+        self.lrelu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+
+        # initialization
+        arch_util.default_init_weights(
+            [self.conv_first, self.conv_last], 0.1)
+
+    def forward(self, x):
+        feat = self.lrelu(self.conv_first(x))
+        out = self.body(feat)
+
+        out += feat
+        out = self.conv_last(out)
+        return out

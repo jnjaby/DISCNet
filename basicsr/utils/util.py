@@ -142,12 +142,18 @@ def tensor2img(tensor, out_type=np.uint8, min_max=(0, 1)):
             img_np = make_grid(
                 _tensor, nrow=int(math.sqrt(_tensor.size(0))),
                 normalize=False).numpy()
-            img_np = np.transpose(img_np[[2, 1, 0], :, :],
-                                  (1, 2, 0))  # HWC, BGR
+            if img_np.shape[0] == 3:
+                img_np = np.transpose(img_np[[2, 1, 0], :, :],
+                                    (1, 2, 0))  # HWC, BGR
+            else:
+                img_np = np.transpose(img_np, (1, 2, 0))  # HWC
         elif n_dim == 3:
             img_np = _tensor.numpy()
-            img_np = np.transpose(img_np[[2, 1, 0], :, :],
-                                  (1, 2, 0))  # HWC, BGR
+            if img_np.shape[0] == 3:
+                img_np = np.transpose(img_np[[2, 1, 0], :, :],
+                                    (1, 2, 0))  # HWC, BGR
+            else:
+                img_np = np.transpose(img_np, (1, 2, 0))  # HWC, BGR
         elif n_dim == 2:
             img_np = _tensor.numpy()
         else:
