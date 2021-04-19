@@ -9,10 +9,8 @@ from basicsr.metrics.metric_util import reorder_image, to_y_channel
 
 def estimate_aggd_param(block):
     """Estimate AGGD (Asymmetric Generalized Gaussian Distribution) paramters.
-
     Args:
         block (ndarray): 2D Image block.
-
     Returns:
         tuple: alpha (float), beta_l (float) and beta_r (float) for the AGGD
             distribution (Estimating the parames in Equation 7 in the paper).
@@ -39,10 +37,8 @@ def estimate_aggd_param(block):
 
 def compute_feature(block):
     """Compute features.
-
     Args:
         block (ndarray): 2D Image block.
-
     Returns:
         list: Features with length of 18.
     """
@@ -71,18 +67,14 @@ def niqe(img,
          block_size_h=96,
          block_size_w=96):
     """Calculate NIQE (Natural Image Quality Evaluator) metric.
-
     Ref: Making a "Completely Blind" Image Quality Analyzer.
     This implementation could produce almost the same results as the official
     MATLAB codes: http://live.ece.utexas.edu/research/quality/niqe_release.zip
-
     Note that we do not include block overlap height and width, since they are
     always 0 in the official implementation.
-
     For good performance, it is advisable by the official implemtation to
     divide the distorted image in to the same size patched as used for the
     construction of multivariate Gaussian model.
-
     Args:
         img (ndarray): Input image whose quality needs to be computed. The
             image must be a gray or Y (of YCbCr) image with shape (h, w).
@@ -141,7 +133,9 @@ def niqe(img,
 
     # fit a MVG (multivariate Gaussian) model to distorted patch features
     mu_distparam = np.nanmean(distparam, axis=0)
-    cov_distparam = np.cov(distparam, rowvar=False)  # TODO: use nancov
+    # use nancov. ref: https://ww2.mathworks.cn/help/stats/nancov.html
+    distparam_no_nan = distparam[~np.isnan(distparam).any(axis=1)]
+    cov_distparam = np.cov(distparam_no_nan, rowvar=False)
 
     # compute niqe quality, Eq. 10 in the paper
     invcov_param = np.linalg.pinv((cov_pris_param + cov_distparam) / 2)
@@ -155,14 +149,11 @@ def niqe(img,
 
 def calculate_niqe(img, crop_border, input_order='HWC', convert_to='y'):
     """Calculate NIQE (Natural Image Quality Evaluator) metric.
-
     Ref: Making a "Completely Blind" Image Quality Analyzer.
     This implementation could produce almost the same results as the official
     MATLAB codes: http://live.ece.utexas.edu/research/quality/niqe_release.zip
-
     We use the official params estimated from the pristine dataset.
     We use the recommended block size (96, 96) without overlaps.
-
     Args:
         img (ndarray): Input image whose quality needs to be computed.
             The input image must be in range [0, 255] with float/int type.
@@ -175,7 +166,6 @@ def calculate_niqe(img, crop_border, input_order='HWC', convert_to='y'):
             Default: 'HWC'.
         convert_to (str): Whether coverted to 'y' (of MATLAB YCbCr) or 'gray'.
             Default: 'y'.
-
     Returns:
         float: NIQE result.
     """

@@ -29,7 +29,7 @@ def download_pretrained_models(method, file_ids):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--method', type=str, default='ESRGAN')
+    parser.add_argument('--method', type=str, default='DISCNet')
     args = parser.parse_args()
 
     file_ids = {
@@ -118,7 +118,11 @@ if __name__ == '__main__':
             '1PNPSmFjmbuuUDd5Mg5LDxyk7tu7TQv2F',
             'shape_predictor_68_face_landmarks-fbdc2cb8.dat':
             '1IneH-O-gNkG0SQpNCplwxtOAtRCkG2ni'
-        }
+        },
+        'DISCNet': {
+            'net_g_DISCNet-8c625482.pth':
+            '1Mqro8kmM9kect7Gnv4oR-aAeb80hPsAD'
+        },
     }
 
     download_pretrained_models(args.method, file_ids[args.method])

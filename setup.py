@@ -3,6 +3,7 @@
 from setuptools import find_packages, setup
 
 import os
+import sys
 import subprocess
 import time
 import torch
@@ -118,31 +119,11 @@ def get_requirements(filename='requirements.txt'):
 
 
 if __name__ == '__main__':
-    write_version_py()
-    setup(
-        name='basicsr',
-        version=get_version(),
-        description='Open Source Image and Video Super-Resolution Toolbox',
-        long_description=readme(),
-        author='Xintao Wang',
-        author_email='xintao.wang@outlook.com',
-        keywords='computer vision, restoration, super resolution',
-        url='https://github.com/xinntao/BasicSR',
-        packages=find_packages(
-            exclude=('options', 'datasets', 'experiments', 'results',
-                     'tb_logger', 'wandb')),
-        classifiers=[
-            'Development Status :: 4 - Beta',
-            'License :: OSI Approved :: Apache Software License',
-            'Operating System :: OS Independent',
-            'Programming Language :: Python :: 3',
-            'Programming Language :: Python :: 3.7',
-            'Programming Language :: Python :: 3.8',
-        ],
-        license='Apache License 2.0',
-        setup_requires=['cython', 'numpy'],
-        install_requires=get_requirements(),
-        ext_modules=[
+    if '--no_cuda_ext' in sys.argv:
+        ext_modules = []
+        sys.argv.remove('--no_cuda_ext')
+    else:
+        ext_modules = [
             make_cuda_ext(
                 name='deform_conv_ext',
                 module='basicsr.models.ops.dcn',
@@ -161,6 +142,33 @@ if __name__ == '__main__':
                 module='basicsr.models.ops.upfirdn2d',
                 sources=['src/upfirdn2d.cpp'],
                 sources_cuda=['src/upfirdn2d_kernel.cu']),
+        ]
+
+    write_version_py()
+    setup(
+        name='basicsr',
+        version=get_version(),
+        description='Open Source Image and Video Super-Resolution Toolbox',
+        long_description=readme(),
+        author='Xintao Wang',
+        author_email='xintao.wang@outlook.com',
+        keywords='computer vision, restoration, super resolution',
+        url='https://github.com/xinntao/BasicSR',
+
+        packages=find_packages(
+            exclude=('options', 'datasets', 'experiments', 'results',
+                     'tb_logger', 'wandb')),
+        classifiers=[
+            'Development Status :: 4 - Beta',
+            'License :: OSI Approved :: Apache Software License',
+            'Operating System :: OS Independent',
+            'Programming Language :: Python :: 3',
+            'Programming Language :: Python :: 3.7',
+            'Programming Language :: Python :: 3.8',
         ],
+        license='Apache License 2.0',
+        setup_requires=['cython', 'numpy'],
+        install_requires=get_requirements(),
+        ext_modules=ext_modules,
         cmdclass={'build_ext': BuildExtension},
         zip_safe=False)

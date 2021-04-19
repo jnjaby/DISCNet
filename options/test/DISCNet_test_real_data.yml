@@ -1,0 +1,44 @@
+name: DISCNet_test_real_data
+suffix: ~  # add suffix to saved images
+model_type: PSFResModel
+scale: 1
+crop_border: ~  # crop border when evaluation. If None, crop the scale pixels
+num_gpu: 1
+manual_seed: 10
+
+datasets:
+  test_1:
+    name: ZTE_real_rot_5
+    type: PairedImgPSFNpyDataset
+    lq_map_type: simple
+    gt_map_type: simple
+    io_backend:
+      type: npy
+    folders:
+      rot_1:
+        dataroot_lq: /mnt/lustre/rcfeng/DISCNet/datasets/real_data/input
+        dataroot_gt: /mnt/lustre/rcfeng/DISCNet/datasets/real_data/input
+        meta_info_file: /mnt/lustre/rcfeng/DISCNet/datasets/PSF/kernel_info_list/real_ZTE_list.txt
+
+# network structures
+network_g:
+  type: DISCNet
+  in_nc: 3
+  out_nc: 3
+  nf: 32
+  ns: 3
+  multi_scale: true
+  kernel_cond: img-psf
+  psf_nc: 5
+  kpn_sz: 5
+
+# validation settings
+val:
+  save_img: true
+  save_npy: true
+  suffix: ~
+
+# path
+path:
+  pretrain_model_g: experiments/pretrained_models/DISCNet/net_g_DISCNet-8c625482.pth
+  strict_load: true

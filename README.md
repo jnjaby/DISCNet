@@ -1,37 +1,27 @@
-# :rocket: BasicSR
+# DISCNet 
 
-[GitHub](https://github.com/xinntao/BasicSR) | [Gitee码云](https://gitee.com/xinntao/BasicSR) <br>
-[English](README.md) | [简体中文](README_CN.md)
+![Python 3.7](https://img.shields.io/badge/python-3.7-green.svg?style=plastic)
+![pytorch 1.3.0](https://img.shields.io/badge/pytorch-1.3.0-green.svg?style=plastic)
+![CUDA 10.1](https://camo.githubusercontent.com/5e1f2e59c9910aa4426791d95a714f1c90679f5a/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f637564612d31302e312d677265656e2e7376673f7374796c653d706c6173746963)
 
-BasicSR is an **open source** image and video super-resolution toolbox based on PyTorch (will extend to more restoration tasks in the future).<br>
-<sub>([ESRGAN](https://github.com/xinntao/ESRGAN), [EDVR](https://github.com/xinntao/EDVR), [DNI](https://github.com/xinntao/DNI), [SFTGAN](https://github.com/xinntao/SFTGAN))</sub>
+This repository contains the implementation of the following paper:
+> **Removing Diffraction Image Artifacts in Under-Display Camera via
+        Dynamic Skip Connection Network**<br>
+> Ruicheng Feng, Chongyi Li, Huaijin Chen, Shuai Li, Chen Change Loy, Jinwei Gu<br>
+> Computer Vision and Pattern Recognition (**CVPR**), 2021<br>
 
-## :sparkles: New Feature
+[[Paper](https://jnjaby.github.io/projects/UDC/src/03719.pdf)] [[Supplementary](https://jnjaby.github.io/projects/UDC/src/03719-supp.pdf)] [[Project Page](https://jnjaby.github.io/projects/UDC/)]
 
-- Sep 8, 2020. Add **blind face restoration inference codes: [DFDNet](https://github.com/csxmli2016/DFDNet)**. Note that it is slightly different from the official testing codes.
-   > Blind Face Restoration via Deep Multi-scale Component Dictionaries <br>
-   > Xiaoming Li, Chaofeng Chen, Shangchen Zhou, Xianhui Lin, Wangmeng Zuo and Lei Zhang <br>
-   > European Conference on Computer Vision (ECCV), 2020
-- Aug 27, 2020. Add **StyleGAN2 training and testing** codes: [StyleGAN2](https://github.com/rosinality/stylegan2-pytorch).
-   > Analyzing and Improving the Image Quality of StyleGAN <br>
-   > Tero Karras, Samuli Laine, Miika Aittala, Janne Hellsten, Jaakko Lehtinen and Timo Aila <br>
-   > Computer Vision and Pattern Recognition (CVPR), 2020
 
-<details>
-  <summary>More</summary>
-<ul>
-  <li>Aug 19, 2020. A brand-new BasicSR v1.0.0 online.</li>
-</ul>
-</details>
+![overall_structure](./assets/architecture.png)
 
-## :zap: HOWTOs
+**Overview of our proposed DISCNet.** The main restoration branch consists of an encoder and a decoder, with feature maps propagated and transformed by DISCNet through skip connections. DISCNet applies multi-scale dynamic convolutions using generated filters conditioned on PSF kernel code and spatial information from input images.
 
-We provides simple pipelines to train/test/inference models for quick start.
-These pipelines/commands cannot cover all the cases and more details are in the following sections.
+![result](assets/fig1.png)
 
-- :zap: [How to train StyleGAN2](docs/HOWTOs.md#How-to-train-StyleGAN2)
-- :zap: [How to test StyleGAN2](docs/HOWTOs.md#How-to-test-StyleGAN2)
-- :zap: [How to test DFDNet](docs/HOWTOs.md#How-to-test-DFDNet)
+**Figure**:
+Removing *Diffraction* artifacts from Under-Display Camera (*UDC*) images using the proposed *DISCNet*. The major degradations caused by light diffraction are a combination of *flare*, *blur*, and *haze*. 
+
 
 ## Dependencies and Installation
 
@@ -39,58 +29,132 @@ These pipelines/commands cannot cover all the cases and more details are in the 
 - [PyTorch >= 1.3](https://pytorch.org/)
 - NVIDIA GPU + [CUDA](https://developer.nvidia.com/cuda-downloads)
 
-Please run the following commands in the **BasicSR root path** to install BasicSR:<br>
-(Make sure that your GCC version: gcc >= 5)
+1. Clone repo
 
-```bash
-pip install -r requirements.txt
-python setup.py develop
-```
+   ```bash
+   git clone https://github.com/jnjaby/DISCNet.git
+   ```
 
-Note that BasicSR is only tested in Ubuntu, and may be not suitable for Windows. You may try [Windows WSL with CUDA supports](https://docs.microsoft.com/en-us/windows/win32/direct3d12/gpu-cuda-in-wsl) :-) (It is now only available for insider build with Fast ring).
+1. Install Dependencies
 
-## TODO List
+   ```bash
+   cd DISCNet
+   pip install -r requirements.txt
+   ```
 
-Please see [project boards](https://github.com/xinntao/BasicSR/projects).
+1. Install BasicSR
+
+   Compile BasicSR without cuda extensions for DCN (Remember to modify the CUDA paths in `make.sh` and make sure that your GCC version: gcc >= 5) <br>
+
+    ```bash
+    sh ./make.sh
+    ```
+
 
 ## Dataset Preparation
 
-- Please refer to **[DatasetPreparation.md](docs/DatasetPreparation.md)** for more details.
-- The descriptions of currently supported datasets (`torch.utils.data.Dataset` classes) are in [Datasets.md](docs/Datasets.md).
+You can use the provided download script. The script considerably ruduce your workload by automatically downloading all the requested files, retrying each file on error, and unzip files.
 
-## Train and Test
+Alternatively, you can also grab the data directly from [GoogleDrive](https://drive.google.com/drive/folders/13dZxX_9CI6CeS4zKd2SWGeT-7awhgaJF?usp=sharing), unzip and put them into `./datasets`.
 
-- **Training and testing commands**: Please see **[TrainTest.md](docs/TrainTest.md)** for the basic usage.
-- **Options/Configs**: Please refer to [Config.md](docs/Config.md).
-- **Logging**: Please refer to [Logging.md](docs/Logging.md).
+Please refer to **[Datasets.md](datasets/README.md)** for pre-processing and more details.
 
-## Model Zoo and Baselines
 
-**[Download official pre-trained models](https://drive.google.com/drive/folders/15DgDtfaLASQ3iAPJEVHQF49g9msexECG?usp=sharing)**<br>
-**[Download reproduced models and logs](https://drive.google.com/drive/folders/1XN4WXKJ53KQ0Cu0Yv-uCt8DZWq6uufaP?usp=sharing)**
 
-- The descriptions of currently supported models are in [Models.md](docs/Models.md).
-- **Pre-trained models and log examples** are available in **[ModelZoo.md](docs/ModelZoo.md)**.
-- We also provide **training curves** in [wandb](https://app.wandb.ai/xintao/basicsr):
+## Get Started
 
-<p align="center">
-<a href="https://app.wandb.ai/xintao/basicsr" target="_blank">
-   <img src="./assets/wandb.jpg" height="280">
-</a></p>
+### Test
 
-## Codebase Designs and Conventions
+We provide quick test code with the pretrained model. The testing command assumes using single GPU testing. Please see **[TrainTest.md](docs/TrainTest.md)** if you prefer using `slurm`.
 
-Please see [DesignConvention.md](docs/DesignConvention.md) for the designs and conventions of the BasicSR codebase.<br>
-The figure below shows the overall framework. More descriptions for each component: <br>
-**[Datasets.md](docs/Datasets.md)**&emsp;|&emsp;**[Models.md](docs/Models.md)**&emsp;|&emsp;**[Config.md](Config.md)**&emsp;|&emsp;**[Logging.md](docs/Logging.md)**
+1. Download pretrained models from Google Drive.
 
-![overall_structure](./assets/overall_structure.png)
+    ```bash
+    python scripts/download_pretrained_models.py --method=DISCNet
+    ```
+
+1. Modify the paths to dataset and pretrained model in the following yaml files for configuration.
+
+    ```bash
+    ./options/test/DISCNet_test_synthetic_data.yml
+    ./options/test/DISCNet_test_real_data.yml
+    ```
+
+1. Run test code for **synthetic** data.
+
+    ```bash
+    python -u basicsr/test.py -opt "options/test/DISCNet_test_synthetic_data.yml" --launcher="none"
+    ```
+
+   Check out the results in `./results`.
+
+1. Run test code for **real** data.
+
+   Feed the real data to the pre-trained network. 
+
+    ```bash
+    python -u basicsr/test.py -opt "options/test/DISCNet_test_real_data.yml" --launcher="none"
+    ```
+
+   The results are in `./results` (Pre-ISP versions, saved as `.png` and `.npy`.)
+   
+   (*Optional*) If you wish to further improve the visual quality, apply the post-processing pipeline.
+
+    ```bash
+    cd datasets
+    python data_scripts/post_process.py \
+    --data_path="../results/DISCNet_test_real_data/visualization/ZTE_real_rot_5" \
+    --ref_path="datasets/real_data" \
+    --save_path="../results/post_images"
+    ```
+
+### Train
+
+All logging files in the training process, *e.g.*, log message, checkpoints, and snapshots, will be saved to `./experiments` and `./tb_logger` directory.
+
+1. Prepare datasets. Please refer to `Dataset Preparation`.
+
+1. Modify config files.
+
+   ```bash
+   ./options/train/DISCNet_train.yml
+   ```
+
+1. Run training code (*Slurm Training*). Kindly checkout **[TrainTest.md](docs/TrainTest.md)** and use single GPU training, distributed training, or slurm training as per your preference.
+
+   ```bash
+   srun -p [partition] --mpi=pmi2 --job-name=DISCNet --gres=gpu:2 --ntasks=2 --ntasks-per-node=2 --cpus-per-task=2 --kill-on-bad-exit=1 \
+   python -u basicsr/train.py -opt "options/train/DISCNet_train.yml" --launcher="slurm"
+   ```
+
+## Results
+
+![syn_result](assets/syn_visual_result.png)
+Result on *synthetic* dataset.
+
+![real_result](assets/real_vusual_result.png)
+Result on *real* dataset.
+
+
+## Citataion
+
+   If you find our repo useful for your research, please consider citing our paper:
+
+   ```bibtex
+   @inproceedings{feng2021removing,
+      author = {Feng, Ruicheng and Li, Chongyi and Chen, Huaijin and Li, Shuai and Loy, Chen Change and Gu, Jinwei},
+      title = {Removing Diffraction Image Artifacts in Under-Display Camera via Dynamic Skip Connection Networks},
+      booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+      year = {2021}
+   }
+   ```
+
 
 ## License and Acknowledgement
 
-This project is released under the Apache 2.0 license.
-More details about license and acknowledgement are in [LICENSE](LICENSE/README.md).
+This project is open sourced under MIT license. The code framework is mainly modified from [BasicSR](https://github.com/xinntao/BasicSR). Please refer to the original repo for more usage and documents.
+
 
 ## Contact
 
-If you have any question, please email `xintao.wang@outlook.com`.
+If you have any question, please feel free to contact us via `ruicheng002@ntu.edu.sg`.

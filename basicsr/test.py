@@ -81,7 +81,8 @@ def main():
     model = create_model(opt)
 
     dummy_input = torch.zeros((1, 3, 800, 800)).to(model.device)
-    summary(model.net_g, dummy_input)
+    dummy_psf = torch.zeros((1, 5, 1, 1)).to(model.device)
+    summary(model.net_g, dummy_input, dummy_psf)
 
     for test_loader in test_loaders:
         test_set_name = test_loader.dataset.opt['name']

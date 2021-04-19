@@ -9,15 +9,16 @@ import numpy as np
 import math
 
 
-class UnitNet(nn.Module):
-    def __init__(self, in_nc, out_nc, nf, ns, kpn_sz=5, skip=False, norm_type=None, \
-                    kernel_cond=None, act_type='leakyrelu', \
-                    res_scale=1, kernel_size=3):
+class DISCNet(nn.Module):
+    def __init__(self, in_nc, out_nc, nf, ns, kpn_sz=5, norm_type=None, \
+                    act_type='leakyrelu', res_scale=1, kernel_size=3, \
+                    kernel_cond=None, psf_nc=5, multi_scale=False):
         super().__init__()
         self.ns = ns
-        self.skip = skip
         self.kpn_sz = kpn_sz
         self.kernel_cond = kernel_cond
+        self.multi_scale = multi_scale
+        # self.encode_type = encode_type
 
         #############################
         # Restoration Branch
@@ -53,19 +54,31 @@ class UnitNet(nn.Module):
             if self.kernel_cond == 'img':
                 cond_nc = in_nc
             elif self.kernel_cond == 'psf':
-                cond_nc = 7
-                self.register_buffer('psf', get_pca())
+                cond_nc = psf_nc
             elif self.kernel_cond == 'img-psf':
-                cond_nc = in_nc + 7
-                self.register_buffer('psf', get_pca())
+                cond_nc = in_nc + psf_nc
 
             self.kconv_11 = conv_block(cond_nc, nf, kernel_size=kernel_size, act_type=act_type)
             self.kconv_12 = ResBlock(nf, res_scale=res_scale, act_type=act_type)
             self.kconv_13 = ResBlock(nf, res_scale=res_scale, act_type=act_type)
 
+            if self.multi_scale:
+                self.dynamic_kernel1 = nn.Sequential(
+                    conv_block(nf, nf, kernel_size=kernel_size),
+                    ResBlock(nf, res_scale=res_scale, act_type=act_type),
+                    ResBlock(nf, res_scale=res_scale, act_type=act_type),
+                    conv_block(nf, nf * (kpn_sz ** 2), kernel_size=1))
+
             self.kconv_21 = conv_block(nf, 2*nf, stride=2, kernel_size=kernel_size, act_type=act_type)
             self.kconv_22 = ResBlock(2*nf, res_scale=res_scale, act_type=act_type)
             self.kconv_23 = ResBlock(2*nf, res_scale=res_scale, act_type=act_type)
+
+            if self.multi_scale:
+                self.dynamic_kernel2 = nn.Sequential(
+                    conv_block(2*nf, 2*nf, kernel_size=kernel_size),
+                    ResBlock(2*nf, res_scale=res_scale, act_type=act_type),
+                    ResBlock(2*nf, res_scale=res_scale, act_type=act_type),
+                    conv_block(2*nf, 2*nf * (kpn_sz ** 2), kernel_size=1))
 
             self.kconv_31 = conv_block(2*nf, 4*nf, stride=2, kernel_size=kernel_size, act_type=act_type)
             self.kconv_32 = ResBlock(4*nf, res_scale=res_scale, act_type=act_type)
@@ -78,7 +91,7 @@ class UnitNet(nn.Module):
                 conv_block(4*nf, 4*nf * (kpn_sz ** 2), kernel_size=1))
 
 
-    def forward(self, x):
+    def forward(self, x, psf=None):
         if not self.training:
             N, C, H, W = x.shape
             H_pad = 4 - H % 4 if not H % 4 == 0 else 0
@@ -93,16 +106,18 @@ class UnitNet(nn.Module):
             if self.kernel_cond == 'img':
                 cond_x = x
             elif self.kernel_cond == 'psf':
-                cond_x = self.psf.expand(x.shape[0], -1, x.shape[2], x.shape[3])
+                cond_x = psf.expand(-1, -1, x.shape[2], x.shape[3])
             elif self.kernel_cond == 'img-psf':
-                cond_x = self.psf.expand(x.shape[0], -1, x.shape[2], x.shape[3])
+                cond_x = psf.expand(-1, -1, x.shape[2], x.shape[3])
                 cond_x = torch.cat((cond_x, x), dim=1)
 
             kfea1 = self.kconv_13(self.kconv_12(self.kconv_11(cond_x)))
             kfea2 = self.kconv_23(self.kconv_22(self.kconv_21(kfea1)))
             kfea3 = self.kconv_33(self.kconv_32(self.kconv_31(kfea2)))
+            if self.multi_scale:
+                dynamic_kernel1 = self.dynamic_kernel1(kfea1)
+                dynamic_kernel2 = self.dynamic_kernel2(kfea2)
             dynamic_kernel = self.dynamic_kernel(kfea3)
-
 
         #############################
         # Restoration Branch
@@ -117,15 +132,17 @@ class UnitNet(nn.Module):
             fea3 = kernel2d_conv(fea3, dynamic_kernel, self.kpn_sz)
 
         # Decoder
-        if self.skip:
+        if self.multi_scale:
+            fea2 = kernel2d_conv(fea2, dynamic_kernel2, self.kpn_sz)
             upfea2 = self.upconv_23(self.upconv_22(self.upconv_21(fea3) + fea2))
         else:
-            upfea2 = self.upconv_23(self.upconv_22(self.upconv_21(fea3)))
+            upfea2 = self.upconv_23(self.upconv_22(self.upconv_21(fea3) + fea2))
 
-        if self.skip:
+        if self.multi_scale:
+            fea1 = kernel2d_conv(fea1, dynamic_kernel1, self.kpn_sz)
             upfea1 = self.upconv_13(self.upconv_12(self.upconv_11(upfea2) + fea1))
         else:
-            upfea1 = self.upconv_13(self.upconv_12(self.upconv_11(upfea2)))
+            upfea1 = self.upconv_13(self.upconv_12(self.upconv_11(upfea2) + fea1))
 
         fea = self.final_conv(upfea1)
         out = fea + x
@@ -133,12 +150,6 @@ class UnitNet(nn.Module):
         if not self.training:
             out = out[:, :, :H, :W]
         return out
-
-
-def get_pca():
-    x = torch.tensor([0.2038666, -0.30429688, -0.25263874, -0.07093838, 0.00750307, \
-        0.00584931, -0.03297379])
-    return x[None, :, None, None]
 
 
 def conv_block(in_nc, out_nc, kernel_size, stride=1, dilation=1, groups=1, bias=True, \
@@ -328,11 +339,16 @@ class ResBlock(nn.Module):
             otherwise, use default_init_weights. Default: False.
     """
 
-    def __init__(self, num_feat=64, res_scale=1, pytorch_init=False, act_type='leakyrelu'):
+    def __init__(self, num_feat=64, res_scale=1, pytorch_init=False, dilation=1,
+                        act_type='leakyrelu'):
         super().__init__()
         self.res_scale = res_scale
-        self.conv1 = nn.Conv2d(num_feat, num_feat, 3, 1, 1, bias=True)
-        self.conv2 = nn.Conv2d(num_feat, num_feat, 3, 1, 1, bias=True)
+        padding = get_valid_padding(3, dilation)
+
+        self.conv1 = nn.Conv2d(num_feat, num_feat, 3, 1, bias=True, \
+                            padding=padding, dilation=dilation)
+        self.conv2 = nn.Conv2d(num_feat, num_feat, 3, 1, bias=True, \
+                            padding=padding, dilation=dilation)
         self.act = act(act_type) if act_type else None
 
         if not pytorch_init:

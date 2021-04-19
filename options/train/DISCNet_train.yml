@@ -1,0 +1,158 @@
+# Modified SRResNet w/o BN from:
+# Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network
+
+# general settings
+name: DISCNet_train_synthetic_data
+model_type: PSFResModel
+scale: 1
+num_gpu: 2
+manual_seed: 10
+
+# dataset and data loader settings
+datasets:
+  train:
+    name: syn_pair_train
+    type: PairedImgPSFNpyDataset
+    lq_map_type: simple
+    gt_map_type: simple
+    filename_tmpl: '{}'
+    io_backend:
+      type: npy
+    folders:
+      rot_1:
+        dataroot_lq: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/input/ZTE_new_1/train/
+        dataroot_gt: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/GT/train/
+        meta_info_file: /mnt/lustre/rcfeng/DISCNet/datasets/PSF/kernel_info_list/ZTE_new/ZTE_new_code_1_train.txt
+      rot_2:
+        dataroot_lq: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/input/ZTE_new_2/train/
+        dataroot_gt: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/GT/train/
+        meta_info_file: /mnt/lustre/rcfeng/DISCNet/datasets/PSF/kernel_info_list/ZTE_new/ZTE_new_code_2_train.txt
+      rot_3:
+        dataroot_lq: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/input/ZTE_new_3/train/
+        dataroot_gt: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/GT/train/
+        meta_info_file: /mnt/lustre/rcfeng/DISCNet/datasets/PSF/kernel_info_list/ZTE_new/ZTE_new_code_3_train.txt
+      rot_4:
+        dataroot_lq: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/input/ZTE_new_4/train/
+        dataroot_gt: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/GT/train/
+        meta_info_file: /mnt/lustre/rcfeng/DISCNet/datasets/PSF/kernel_info_list/ZTE_new/ZTE_new_code_4_train.txt
+      rot_5:
+        dataroot_lq: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/input/ZTE_new_5/train/
+        dataroot_gt: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/GT/train/
+        meta_info_file: /mnt/lustre/rcfeng/DISCNet/datasets/PSF/kernel_info_list/ZTE_new/ZTE_new_code_5_train.txt
+      rot_6:
+        dataroot_lq: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/input/ZTE_new_6/train/
+        dataroot_gt: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/GT/train/
+        meta_info_file: /mnt/lustre/rcfeng/DISCNet/datasets/PSF/kernel_info_list/ZTE_new/ZTE_new_code_6_train.txt
+      rot_7:
+        dataroot_lq: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/input/ZTE_new_7/train/
+        dataroot_gt: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/GT/train/
+        meta_info_file: /mnt/lustre/rcfeng/DISCNet/datasets/PSF/kernel_info_list/ZTE_new/ZTE_new_code_7_train.txt
+      rot_8:
+        dataroot_lq: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/input/ZTE_new_8/train/
+        dataroot_gt: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/GT/train/
+        meta_info_file: /mnt/lustre/rcfeng/DISCNet/datasets/PSF/kernel_info_list/ZTE_new/ZTE_new_code_8_train.txt
+      rot_9:
+        dataroot_lq: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/input/ZTE_new_9/train/
+        dataroot_gt: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/GT/train/
+        meta_info_file: /mnt/lustre/rcfeng/DISCNet/datasets/PSF/kernel_info_list/ZTE_new/ZTE_new_code_9_train.txt
+
+    gt_size: 256
+    use_flip: false
+    use_rot: false
+
+    # data loader
+    use_shuffle: true
+    num_worker_per_gpu: 2  # per GPU
+    batch_size_per_gpu: 8  # total
+    dataset_enlarge_ratio: 20
+    prefetch_mode: cuda
+    pin_memory: true
+
+  val:
+    name: syn_val_rot5
+    type: PairedImgPSFNpyDataset
+    lq_map_type: simple
+    gt_map_type: simple
+    io_backend:
+      type: npy
+    folders:
+      rot_5:
+        dataroot_lq: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/input/ZTE_new_5/test/
+        dataroot_gt: /mnt/lustre/rcfeng/DISCNet/datasets/synthetic_data/GT/test/
+        meta_info_file: /mnt/lustre/rcfeng/DISCNet/datasets/PSF/kernel_info_list/ZTE_new/ZTE_new_code_5_test.txt
+
+# network structures
+network_g:
+  type: DISCNet
+  in_nc: 3
+  out_nc: 3
+  nf: 32
+  ns: 3
+  multi_scale: true
+  kernel_cond: img-psf
+  psf_nc: 5
+  kpn_sz: 5
+
+# path
+path:
+  pretrain_model_g: ~
+  strict_load: true
+  resume_state: ~
+
+# training settings
+train:
+  optim_g:
+    type: Adam
+    lr: !!float 2e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+
+  scheduler:
+    type: CosineAnnealingRestartLR
+    periods: [200000, 200000, 200000, 200000, 200000]
+    restart_weights: [1, 1, 1, 1, 1]
+    eta_min: !!float 1e-7
+
+  total_iter: 1000000
+  warmup_iter: -1  # no warm up
+
+  # losses
+  pixel_opt:
+    type: L1Loss
+    loss_weight: !!float 1.0
+    reduction: mean
+  perceptual_opt:
+    type: PerceptualLoss
+    layer_weights:
+      'conv5_4': 1  # before relu
+    vgg_type: vgg19
+    use_input_norm: true
+    perceptual_weight: !!float 1e-2
+    style_weight: 0
+    norm_img: false
+    criterion: l1
+
+# validation settings
+val:
+  val_freq: !!float 5e3
+  save_img: true
+
+  metrics:
+    psnr: # metric name, can be arbitrary
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+
+# logging settings
+logger:
+  print_freq: 100
+  save_checkpoint_freq: !!float 5e3
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+# dist training settings
+dist_params:
+  backend: nccl
+  port: 29015
