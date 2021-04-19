@@ -6,6 +6,11 @@ tb_logger/*
 wandb/*
 tmp/*
 
+# unignore sub-folder
+!datasets/data_scripts/*
+!datasets/data_scripts/utils/*
+# !assets/*
+
 .vscode
 
 # ignored files
@@ -13,7 +18,7 @@ version.py
 
 # ignored files with suffix
 *.html
-*.png
+# *.png
 *.jpg
 *.gif
 *.pth
