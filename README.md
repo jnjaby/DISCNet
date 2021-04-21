@@ -10,7 +10,8 @@ This repository contains the implementation of the following paper:
 > Ruicheng Feng, Chongyi Li, Huaijin Chen, Shuai Li, Chen Change Loy, Jinwei Gu<br>
 > Computer Vision and Pattern Recognition (**CVPR**), 2021<br>
 
-[[Paper](https://jnjaby.github.io/projects/UDC/src/03719.pdf)] [[Supplementary](https://jnjaby.github.io/projects/UDC/src/03719-supp.pdf)] [[Project Page](https://jnjaby.github.io/projects/UDC/)]
+[[Paper](https://arxiv.org/abs/2104.09556)]
+[[Project Page](https://jnjaby.github.io/projects/UDC/)]
 
 
 ![overall_structure](./assets/architecture.png)

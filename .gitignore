@@ -7,9 +7,11 @@ wandb/*
 tmp/*
 
 # unignore sub-folder
-!datasets/data_scripts/*
-!datasets/data_scripts/utils/*
-# !assets/*
+!datasets/
+datasets/*
+!datasets/data_scripts/
+
+!assets/*
 
 .vscode
 
@@ -18,7 +20,7 @@ version.py
 
 # ignored files with suffix
 *.html
-# *.png
+*.png
 *.jpg
 *.gif
 *.pth
