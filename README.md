@@ -142,11 +142,13 @@ Result on *real* dataset.
    If you find our repo useful for your research, please consider citing our paper:
 
    ```bibtex
-   @inproceedings{feng2021removing,
-      author = {Feng, Ruicheng and Li, Chongyi and Chen, Huaijin and Li, Shuai and Loy, Chen Change and Gu, Jinwei},
-      title = {Removing Diffraction Image Artifacts in Under-Display Camera via Dynamic Skip Connection Networks},
-      booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
-      year = {2021}
+   @InProceedings{Feng_2021_CVPR,
+      author    = {Feng, Ruicheng and Li, Chongyi and Chen, Huaijin and Li, Shuai and Loy, Chen Change and Gu, Jinwei},
+      title     = {Removing Diffraction Image Artifacts in Under-Display Camera via Dynamic Skip Connection Network},
+      booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+      month     = {June},
+      year      = {2021},
+      pages     = {662-671}
    }
    ```
 
