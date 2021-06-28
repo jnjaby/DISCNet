@@ -11,7 +11,7 @@ tmp/*
 datasets/*
 !datasets/data_scripts/
 
-!assets/*
+# !assets/*
 
 .vscode
 
@@ -20,7 +20,7 @@ version.py
 
 # ignored files with suffix
 *.html
-*.png
+# *.png
 *.jpg
 *.gif
 *.pth

@@ -54,7 +54,7 @@ Removing *Diffraction* artifacts from Under-Display Camera (*UDC*) images using 
 
 ## Dataset Preparation
 
-You can use the provided download script. The script considerably ruduce your workload by automatically downloading all the requested files, retrying each file on error, and unzip files.
+You can use the provided download script. The script considerably reduce your workload by automatically downloading all the requested files, retrying each file on error, and unzip files.
 
 Alternatively, you can also grab the data directly from [GoogleDrive](https://drive.google.com/drive/folders/13dZxX_9CI6CeS4zKd2SWGeT-7awhgaJF?usp=sharing), unzip and put them into `./datasets`.
 
@@ -137,7 +137,7 @@ Result on *synthetic* dataset.
 Result on *real* dataset.
 
 
-## Citataion
+## Citation
 
    If you find our repo useful for your research, please consider citing our paper:
 
