@@ -27,7 +27,7 @@ def download_file_from_google_drive(file_id, save_path):
 
     # get file size
     response_file_size = session.get(
-        URL, params=params, stream=True, headers={'Range': 'bytes=0-2'})
+        URL, params=params, stream=True, timeout=30, headers={'Range': 'bytes=0-2'})
     if 'Content-Range' in response_file_size.headers:
         file_size = int(
             response_file_size.headers['Content-Range'].split('/')[1])
