@@ -19,11 +19,11 @@ def download_file_from_google_drive(file_id, save_path):
     URL = 'https://docs.google.com/uc?export=download'
     params = {'id': file_id}
 
-    response = session.get(URL, params=params, stream=True)
+    response = session.get(URL, params=params, stream=True, timeout=30)
     token = get_confirm_token(response)
     if token:
         params['confirm'] = token
-        response = session.get(URL, params=params, stream=True)
+        response = session.get(URL, params=params, stream=True, timeout=30)
 
     # get file size
     response_file_size = session.get(
